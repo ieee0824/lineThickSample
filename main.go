@@ -27,6 +27,74 @@ func toGray16(img image.Image) *image.Gray16 {
 	return ret
 }
 
+func gaussian(img *image.Gray16) *image.Gray16 {
+	b := img.Bounds()
+	ret := image.NewGray16(b)
+
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			var buf uint
+			var counter uint
+		skip:
+			for fy := -2; fy <= 2; fy++ {
+				for fx := -2; fx <= 2; fx++ {
+					c := img.At(x+fy, y+fy).(color.Gray16)
+					if y+fy < b.Min.Y || x+fx < b.Min.X {
+						ret.Set(x, y, img.At(x, y))
+						break skip
+					}
+					counter++
+					buf += uint(c.Y)
+				}
+			}
+			if counter == 0 {
+				continue
+			}
+			ret.Set(x, y, color.Gray16{Y: uint16(buf / counter)})
+		}
+	}
+
+	return ret
+}
+
+func fault(img *image.Gray16, t uint16) *image.Gray16 {
+	b := img.Bounds()
+	ret := image.NewGray16(b)
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			ret.Set(x, y, color.Gray16{65535})
+			if y+1 < b.Max.Y {
+				p := img.At(x, y).(color.Gray16)
+				q := img.At(x, y+1).(color.Gray16)
+				n := int(p.Y) - int(q.Y)
+				if n < 0 {
+					n *= -1
+				}
+				if t < uint16(n) {
+					ret.Set(x, y, color.Gray16{0})
+				}
+			}
+			if x+1 < b.Max.X {
+				p := img.At(x, y).(color.Gray16)
+				q := img.At(x+1, y).(color.Gray16)
+				n := int(p.Y) - int(q.Y)
+				if n < 0 {
+					n *= -1
+				}
+				if t < uint16(n) {
+					ret.Set(x, y, color.Gray16{0})
+				}
+			}
+		}
+	}
+
+	return ret
+}
+
+func edge(img *image.Gray16) *image.Gray16 {
+	return fault(img, 512)
+}
+
 func main() {
 	name := flag.String("f", "", "")
 	flag.Parse()
@@ -41,7 +109,7 @@ func main() {
 		panic(err)
 	}
 
-	g := toGray16(img)
+	g := edge(gaussian(toGray16(img)))
 
 	w, err := os.Create("out.png")
 	if err != nil {
