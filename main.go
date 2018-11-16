@@ -27,7 +27,7 @@ func toGray16(img image.Image) *image.Gray16 {
 	return ret
 }
 
-func gaussian(img *image.Gray16) *image.Gray16 {
+func smoothing(img *image.Gray16) *image.Gray16 {
 	b := img.Bounds()
 	ret := image.NewGray16(b)
 
@@ -109,7 +109,7 @@ func main() {
 		panic(err)
 	}
 
-	g := edge(gaussian(toGray16(img)))
+	g := edge(smoothing(toGray16(img)))
 
 	w, err := os.Create("out.png")
 	if err != nil {
